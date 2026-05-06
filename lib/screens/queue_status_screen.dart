@@ -4,19 +4,32 @@ import '../providers/appointment_provider.dart';
 import '../providers/queue_provider.dart';
 import '../widgets/appointment_card.dart';
 
-class QueueStatusScreen extends StatelessWidget {
+class QueueStatusScreen extends StatefulWidget {
   const QueueStatusScreen({Key? key}) : super(key: key);
+
+  @override
+  State<QueueStatusScreen> createState() => _QueueStatusScreenState();
+}
+
+class _QueueStatusScreenState extends State<QueueStatusScreen> {
+  DateTime _selectedDate = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<AppointmentProvider, QueueProvider>(
       builder: (context, apptProvider, queueProvider, child) {
         final allAppts = apptProvider.appointments;
-        final currentServing = queueProvider.getCurrentServingToken(allAppts);
+        final currentServing = queueProvider.getCurrentServingToken(allAppts, _selectedDate);
         
         final activeAppts = allAppts.where((a) {
-          return a.status == 'Scheduled' || a.status == 'In Progress';
+          return a.date.year == _selectedDate.year && 
+                 a.date.month == _selectedDate.month && 
+                 a.date.day == _selectedDate.day &&
+                 (a.status == 'Scheduled' || a.status == 'In Progress');
         }).toList();
+
+        // Sort by queue position to show them in order
+        activeAppts.sort((a, b) => a.queuePosition.compareTo(b.queuePosition));
 
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -47,9 +60,31 @@ class QueueStatusScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Active Queue',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Active Queue',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text('${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}'),
+                    onPressed: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          _selectedDate = date;
+                        });
+                      }
+                    },
+                  )
+                ],
               ),
               const SizedBox(height: 8),
               Expanded(

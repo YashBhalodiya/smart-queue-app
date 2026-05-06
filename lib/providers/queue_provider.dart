@@ -3,20 +3,37 @@ import '../models/appointment.dart';
 import '../models/service_type.dart';
 
 class QueueProvider with ChangeNotifier {
-  // Get current token being served for today
-  int getCurrentServingToken(List<Appointment> allAppointments) {
-    final todaysAppointments = allAppointments.where((a) => 
-      (a.status == 'In Progress' || a.status == 'Completed')
+  int getCurrentServingToken(List<Appointment> allAppointments, DateTime targetDate) {
+    // 1. Find if there is an appointment "In Progress"
+    final inProgressAppts = allAppointments.where((a) => 
+      a.date.year == targetDate.year && 
+      a.date.month == targetDate.month && 
+      a.date.day == targetDate.day &&
+      a.status == 'In Progress'
     ).toList();
 
-    if (todaysAppointments.isEmpty) return 0;
-
-    // Find the highest queue position among In Progress or Completed
-    int maxPos = 0;
-    for (var a in todaysAppointments) {
-      if (a.queuePosition > maxPos) {
-        maxPos = a.queuePosition;
+    if (inProgressAppts.isNotEmpty) {
+      // Return the token that is currently in progress
+      int minPos = inProgressAppts.first.queuePosition;
+      for (var a in inProgressAppts) {
+        if (a.queuePosition < minPos) minPos = a.queuePosition;
       }
+      return minPos;
+    }
+
+    // 2. If nothing is "In Progress", find the highest "Completed" token
+    final completedAppts = allAppointments.where((a) => 
+      a.date.year == targetDate.year && 
+      a.date.month == targetDate.month && 
+      a.date.day == targetDate.day &&
+      a.status == 'Completed'
+    ).toList();
+
+    if (completedAppts.isEmpty) return 0;
+
+    int maxPos = 0;
+    for (var a in completedAppts) {
+      if (a.queuePosition > maxPos) maxPos = a.queuePosition;
     }
     return maxPos;
   }
@@ -25,8 +42,11 @@ class QueueProvider with ChangeNotifier {
     if (appointment.status == 'Completed' || appointment.status == 'Cancelled') return 0;
     if (appointment.status == 'In Progress') return 0;
     
-    // Find all active appointments ahead of this one
+    // Find all active appointments ahead of this one ON THE SAME DAY
     final aheadAppointments = allAppointments.where((a) => 
+      a.date.year == appointment.date.year &&
+      a.date.month == appointment.date.month &&
+      a.date.day == appointment.date.day &&
       a.queuePosition < appointment.queuePosition &&
       (a.status == 'Scheduled' || a.status == 'In Progress')
     ).toList();

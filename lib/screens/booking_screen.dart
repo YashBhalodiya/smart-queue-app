@@ -73,7 +73,12 @@ class _BookingScreenState extends State<BookingScreen> {
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 30)),
                   );
-                  if (date != null) setState(() => _selectedDate = date);
+                  if (date != null) {
+                    setState(() {
+                      _selectedDate = date;
+                      _selectedTimeSlot = null; // Reset slot on date change
+                    });
+                  }
                 },
               ),
               if (_selectedDate == null)
@@ -85,15 +90,38 @@ class _BookingScreenState extends State<BookingScreen> {
 
               // Time Slot Dropdown
               DropdownButtonFormField<String>(
+                value: _selectedTimeSlot,
                 decoration: InputDecoration(
                   labelText: 'Time Slot',
                   prefixIcon: const Icon(Icons.access_time),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 items: AppConstants.timeSlots.map((t) {
-                  return DropdownMenuItem(value: t, child: Text(t));
+                  bool isBooked = false;
+                  if (_selectedDate != null) {
+                    isBooked = provider.appointments.any((a) => 
+                      a.date.year == _selectedDate!.year &&
+                      a.date.month == _selectedDate!.month &&
+                      a.date.day == _selectedDate!.day &&
+                      a.timeSlot == t &&
+                      a.status != 'Cancelled'
+                    );
+                  }
+
+                  return DropdownMenuItem<String>(
+                    value: t,
+                    enabled: !isBooked,
+                    child: Text(
+                      isBooked ? '$t (Booked)' : t,
+                      style: TextStyle(
+                        color: isBooked ? Colors.grey : null,
+                      ),
+                    ),
+                  );
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedTimeSlot = val),
+                onChanged: _selectedDate == null 
+                  ? null 
+                  : (val) => setState(() => _selectedTimeSlot = val),
                 validator: (val) => val == null ? 'Required' : null,
               ),
               const SizedBox(height: 32),
