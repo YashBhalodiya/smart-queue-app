@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/appointment_provider.dart';
-import 'home_screen.dart';
+import 'role_selection_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -26,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
     
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
       );
     }
   }

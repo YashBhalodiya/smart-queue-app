@@ -21,23 +21,26 @@ class QueueProvider with ChangeNotifier {
     return maxPos;
   }
 
-  // Estimate waiting time in minutes
   int estimateWaitingTime(Appointment appointment, List<Appointment> allAppointments, int currentServing) {
     if (appointment.status == 'Completed' || appointment.status == 'Cancelled') return 0;
     if (appointment.status == 'In Progress') return 0;
     
-    int peopleAhead = appointment.queuePosition - currentServing - 1;
-    if (peopleAhead < 0) peopleAhead = 0;
+    // Find all active appointments ahead of this one
+    final aheadAppointments = allAppointments.where((a) => 
+      a.queuePosition < appointment.queuePosition &&
+      (a.status == 'Scheduled' || a.status == 'In Progress')
+    ).toList();
 
-    // Find service average duration
-    int avgDuration = 15; // default
-    try {
-      final sType = ServiceConstants.services.firstWhere((s) => s.name == appointment.serviceType);
-      avgDuration = sType.averageDurationMinutes;
-    } catch (e) {
-      avgDuration = 15;
+    int totalWaitTime = 0;
+    for (var a in aheadAppointments) {
+      try {
+        final sType = ServiceConstants.services.firstWhere((s) => s.name == a.serviceType);
+        totalWaitTime += sType.averageDurationMinutes;
+      } catch (e) {
+        totalWaitTime += 15; // fallback
+      }
     }
 
-    return peopleAhead * avgDuration;
+    return totalWaitTime;
   }
 }
